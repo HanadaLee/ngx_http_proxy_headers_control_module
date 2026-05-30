@@ -91,7 +91,7 @@ static char *ngx_http_proxy_request_headers_control(ngx_conf_t *cf,
     ngx_command_t *cmd, void *conf);
 static char *ngx_http_proxy_response_headers_control(ngx_conf_t *cf,
     ngx_command_t *cmd, void *conf);
-static ngx_int_t ngx_http_proxy_headers_control_post_config(ngx_conf_t *cf);
+static ngx_int_t ngx_http_proxy_headers_control_init(ngx_conf_t *cf);
 static ngx_int_t ngx_http_proxy_request_headers_control_filter(
     ngx_http_request_t *r, ngx_http_proxy_filter_ctx_t *ctx);
 static ngx_int_t ngx_http_proxy_response_headers_control_filter(
@@ -122,7 +122,7 @@ static ngx_command_t  ngx_http_proxy_headers_control_commands[] = {
 
 static ngx_http_module_t  ngx_http_proxy_headers_control_module_ctx = {
     NULL,                                           /* preconfiguration */
-    ngx_http_proxy_headers_control_post_config,     /* postconfiguration */
+    ngx_http_proxy_headers_control_init,            /* postconfiguration */
 
     NULL,                                           /* create main conf */
     NULL,                                           /* init main conf */
@@ -896,7 +896,7 @@ ngx_http_proxy_headers_control_bitmap_isset(
 
 
 static ngx_int_t
-ngx_http_proxy_headers_control_post_config(ngx_conf_t *cf)
+ngx_http_proxy_headers_control_init(ngx_conf_t *cf)
 {
     ngx_int_t                 rc;
     ngx_http_proxy_filter_pt  handler;
