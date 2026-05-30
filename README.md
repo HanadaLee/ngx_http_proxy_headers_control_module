@@ -39,6 +39,8 @@ make install
 
 Controls headers sent to the upstream server.
 
+> **Note on the `Host` header:** Modifying the `Host` request header is not allowed. If you need to change the upstream `Host`, use the built-in [`proxy_set_header`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_set_header) directive instead.
+
 ### proxy_response_header_control
 
 **Syntax:** `proxy_response_header_control <operation> [-n] <header-name> [<value>] [if=<condition>|if!=<condition>]`  

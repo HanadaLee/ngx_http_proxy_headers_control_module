@@ -49,6 +49,7 @@ typedef struct {
     ngx_flag_t                               next;
     ngx_uint_t                               id;
     unsigned                                 wildcard:1;
+    unsigned                                 request:1;
 } ngx_http_proxy_headers_control_header_val_t;
 
 
@@ -396,6 +397,7 @@ ngx_http_proxy_headers_control_parse_directive(ngx_conf_t *cf,
 
     ngx_memzero(hv, sizeof(ngx_http_proxy_headers_control_header_val_t));
     hv->opcode = opcode;
+    hv->request = request;
 
     cur = 2;
 
@@ -478,6 +480,14 @@ ngx_http_proxy_headers_control_parse_directive(ngx_conf_t *cf,
     rc = ngx_http_proxy_headers_control_parse_header(cf, cmd_name, &key,
                                                      &value, hv);
     if (rc != NGX_OK) {
+        return NGX_CONF_ERROR;
+    }
+
+    if (request && !hv->wildcard && hv->key.len == 4
+        && ngx_strncasecmp(hv->key.data, (u_char *) "host", 4) == 0)
+    {
+        ngx_log_error(NGX_LOG_ERR, cf->log, 0,
+                      "%V: the \"Host\" header is not allowed", cmd_name);
         return NGX_CONF_ERROR;
     }
 
@@ -802,6 +812,12 @@ ngx_http_proxy_headers_control_match_header(ngx_table_elt_t *h,
     }
 
     if (hv->wildcard) {
+        if (hv->request && h->key.len == 4
+            && ngx_strncasecmp(h->key.data, (u_char *) "host", 4) == 0)
+        {
+            return NGX_DECLINED;
+        }
+
         if (h->key.len < hv->key.len - 1) {
             return NGX_DECLINED;
         }
