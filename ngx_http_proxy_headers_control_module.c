@@ -70,8 +70,7 @@ static ngx_int_t ngx_http_proxy_headers_control_exec(ngx_http_request_t *r,
     ngx_uint_t *changed);
 static ngx_int_t ngx_http_proxy_headers_control_exec_header(
     ngx_http_request_t *r, ngx_list_t *headers,
-    ngx_http_proxy_headers_control_header_val_t *hv,
-    ngx_http_proxy_headers_control_bitmap_t *locked, ngx_uint_t *changed);
+    ngx_http_proxy_headers_control_header_val_t *hv, ngx_uint_t *changed);
 static ngx_int_t ngx_http_proxy_headers_control_set_header(
     ngx_http_request_t *r, ngx_list_t *headers,
     ngx_http_proxy_headers_control_header_val_t *hv, ngx_str_t *value);
@@ -633,7 +632,7 @@ ngx_http_proxy_headers_control_exec(ngx_http_request_t *r, ngx_list_t *headers,
         }
 
         rc = ngx_http_proxy_headers_control_exec_header(r, headers, &h[i],
-                                                        &locked, changed);
+                                                        changed);
 
         if (rc == NGX_ERROR) {
             return rc;
@@ -655,7 +654,7 @@ ngx_http_proxy_headers_control_exec(ngx_http_request_t *r, ngx_list_t *headers,
 static ngx_int_t
 ngx_http_proxy_headers_control_exec_header(ngx_http_request_t *r,
     ngx_list_t *headers, ngx_http_proxy_headers_control_header_val_t *hv,
-    ngx_http_proxy_headers_control_bitmap_t *locked, ngx_uint_t *changed)
+    ngx_uint_t *changed)
 {
     ngx_str_t  value, val;
 
@@ -696,8 +695,6 @@ ngx_http_proxy_headers_control_exec_header(ngx_http_request_t *r,
     if (changed) {
         *changed = 1;
     }
-
-    (void) locked;
 
     return ngx_http_proxy_headers_control_set_header(r, headers, hv, &value);
 }
