@@ -66,11 +66,10 @@ static ngx_int_t ngx_http_proxy_headers_control_parse_header(ngx_conf_t *cf,
     ngx_str_t *cmd_name, ngx_str_t *key, ngx_str_t *value,
     ngx_http_proxy_headers_control_header_val_t *hv);
 static ngx_int_t ngx_http_proxy_headers_control_exec(ngx_http_request_t *r,
-    ngx_list_t *headers, ngx_array_t *rules, ngx_uint_t rules_cnt,
-    ngx_uint_t *changed);
+    ngx_list_t *headers, ngx_array_t *rules, ngx_uint_t rules_cnt);
 static ngx_int_t ngx_http_proxy_headers_control_exec_header(
     ngx_http_request_t *r, ngx_list_t *headers,
-    ngx_http_proxy_headers_control_header_val_t *hv, ngx_uint_t *changed);
+    ngx_http_proxy_headers_control_header_val_t *hv);
 static ngx_int_t ngx_http_proxy_headers_control_set_header(
     ngx_http_request_t *r, ngx_list_t *headers,
     ngx_http_proxy_headers_control_header_val_t *hv, ngx_str_t *value);
@@ -570,16 +569,13 @@ ngx_http_proxy_headers_control_parse_header(ngx_conf_t *cf,
 
 static ngx_int_t
 ngx_http_proxy_headers_control_exec(ngx_http_request_t *r, ngx_list_t *headers,
-    ngx_array_t *rules, ngx_uint_t rules_cnt, ngx_uint_t *changed)
+    ngx_array_t *rules, ngx_uint_t rules_cnt)
 {
     ngx_int_t                                     rc;
     ngx_uint_t                                    i, j;
     ngx_http_proxy_headers_control_header_val_t  *h;
     ngx_http_proxy_headers_control_bitmap_t       locked;
 
-    if (changed) {
-        *changed = 0;
-    }
 
     if (rules == NULL || rules->nelts == 0) {
         return NGX_DECLINED;
@@ -631,8 +627,7 @@ ngx_http_proxy_headers_control_exec(ngx_http_request_t *r, ngx_list_t *headers,
             }
         }
 
-        rc = ngx_http_proxy_headers_control_exec_header(r, headers, &h[i],
-                                                        changed);
+        rc = ngx_http_proxy_headers_control_exec_header(r, headers, &h[i]);
 
         if (rc == NGX_ERROR) {
             return rc;
@@ -653,8 +648,7 @@ ngx_http_proxy_headers_control_exec(ngx_http_request_t *r, ngx_list_t *headers,
 
 static ngx_int_t
 ngx_http_proxy_headers_control_exec_header(ngx_http_request_t *r,
-    ngx_list_t *headers, ngx_http_proxy_headers_control_header_val_t *hv,
-    ngx_uint_t *changed)
+    ngx_list_t *headers, ngx_http_proxy_headers_control_header_val_t *hv)
 {
     ngx_str_t  value, val;
 
@@ -692,9 +686,6 @@ ngx_http_proxy_headers_control_exec_header(ngx_http_request_t *r,
         }
     }
 
-    if (changed) {
-        *changed = 1;
-    }
 
     return ngx_http_proxy_headers_control_set_header(r, headers, hv, &value);
 }
@@ -941,8 +932,7 @@ ngx_http_proxy_request_headers_control_filter(ngx_http_request_t *r,
 
     rc = ngx_http_proxy_headers_control_exec(r, ctx->headers,
                                              conf->request_headers,
-                                             conf->request_headers_cnt,
-                                             NULL);
+                                             conf->request_headers_cnt);
     if (rc != NGX_OK) {
         return rc;
     }
@@ -955,8 +945,7 @@ static ngx_int_t
 ngx_http_proxy_response_headers_control_filter(ngx_http_request_t *r,
     ngx_http_proxy_filter_ctx_t *ctx)
 {
-    ngx_int_t                                    rc;
-    ngx_uint_t                                   changed;
+    ngx_int_t                                   rc;
     ngx_http_proxy_headers_control_loc_conf_t  *conf;
 
     if (ctx->headers == NULL || ctx->headers_in == NULL) {
@@ -968,17 +957,10 @@ ngx_http_proxy_response_headers_control_filter(ngx_http_request_t *r,
 
     rc = ngx_http_proxy_headers_control_exec(r, ctx->headers,
                                              conf->response_headers,
-                                             conf->response_headers_cnt,
-                                             &changed);
+                                             conf->response_headers_cnt);
     if (rc != NGX_OK) {
         return rc;
     }
-
-    if (!changed) {
-        return NGX_DECLINED;
-    }
-
-    ctx->refresh_headers = 1;
 
     return NGX_DECLINED;
 }
