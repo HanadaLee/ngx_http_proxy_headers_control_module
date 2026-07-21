@@ -7,7 +7,7 @@ An nginx module for fine-grained control over HTTP headers in proxy traffic — 
 - **Request header control** — modify headers before they are sent to the upstream server
 - **Response header control** — modify headers from the upstream before they reach the client
 - **Multiple operations** — `set`, `clear`, `add`, `append`, `rewrite`
-- **Conditional execution** — apply rules only when conditions are met (`if=`, `if!=`)
+- **Conditional execution** — use named `condition`/`when` rules when `ngx_condition_module` is built, or legacy `if=`/`if!=` otherwise
 - **Wildcard support** — clear multiple headers matching a pattern (`Header-*`)
 - **Configuration inheritance** — rules merge naturally across `http`, `server`, and `location` blocks
 
@@ -29,13 +29,25 @@ make
 make install
 ```
 
+To enable named conditions, build both addons statically in the same nginx configuration:
+
+```bash
+./configure \
+    --add-module=/path/to/ngx_condition_module \
+    --add-module=/path/to/ngx_http_proxy_filter_module \
+    --add-module=/path/to/ngx_http_proxy_headers_control_module
+```
+
+Conditional syntax is selected at compile time. With `ngx_condition_module`, use `condition` and `when`; `if=` and `if!=` parameters are rejected. Without it, `when` is unavailable and the legacy parameters remain supported.
+
 ## Directives
 
 ### proxy_request_header_control
 
-**Syntax:** `proxy_request_header_control <operation> [-n] <header-name> [<value>] [if=<condition>|if!=<condition>]`  
+**Syntax:** `proxy_request_header_control <operation> [-n] <header-name> [<value>]`
+
 **Default:** —  
-**Context:** `http`, `server`, `location`, `if in location`
+**Context:** `http`, `server`, `location`, `if in location`, `http when`, `server when`, `location when`
 
 Controls headers sent to the upstream server.
 
@@ -43,9 +55,10 @@ Controls headers sent to the upstream server.
 
 ### proxy_response_header_control
 
-**Syntax:** `proxy_response_header_control <operation> [-n] <header-name> [<value>] [if=<condition>|if!=<condition>]`  
+**Syntax:** `proxy_response_header_control <operation> [-n] <header-name> [<value>]`
+
 **Default:** —  
-**Context:** `http`, `server`, `location`, `if in location`
+**Context:** `http`, `server`, `location`, `if in location`, `http when`, `server when`, `location when`
 
 Controls headers received from the upstream server.
 
@@ -76,7 +89,15 @@ location /api/ {
 ```nginx
 location /api/ {
     proxy_pass http://backend;
-    proxy_request_header_control set X-Debug true if=$arg_debug;
+
+    # With ngx_condition_module
+    condition debug_enabled str_eq $arg_debug 1;
+    when debug_enabled {
+        proxy_request_header_control set X-Debug true;
+    }
+
+    # Without ngx_condition_module, use this instead:
+    # proxy_request_header_control set X-Debug true if=$arg_debug;
 }
 ```
 
@@ -119,10 +140,22 @@ location /api/ {
 
 ## Conditional Rules
 
-Use `if=<expression>` or `if!=<expression>` to conditionally apply a rule. The expression is evaluated as a nginx complex value:
+With `ngx_condition_module`, define a named condition and place one or more rules in a `when` block. A `when` block may reference multiple condition names, and a name may be negated with `!`:
+
+```nginx
+condition has_special_value is_not_empty $special_value;
+condition is_internal str_eq $http_x_internal 1;
+
+when has_special_value !is_internal {
+    proxy_request_header_control set X-Special $special_value;
+    proxy_request_header_control clear X-Internal;
+}
+```
+
+Without `ngx_condition_module`, use the legacy complex-value parameters:
 
 - `if=$var` — apply if the variable is non-empty and not `"0"`
-- `if!=empty` — apply if the string is empty or `"0"`
+- `if!=$var` — apply if the variable is empty or `"0"`
 
 ```nginx
 proxy_request_header_control set X-Special $special_value if=$special_value;
@@ -131,7 +164,7 @@ proxy_request_header_control clear X-Internal if=$http_x_internal;
 
 ## Inheritance
 
-Rules defined in outer contexts (`http` → `server` → `location`) are inherited and merged. If a location defines a rule for the same header as an outer context, the outer rule is overridden (not merged) for that specific header.
+Rules defined in outer contexts (`http` → `server` → `location`) are inherited and merged. Child rules execute before inherited parent rules. An unconditional child exact-header rule without `-n` disables parent rules for the same header. A rule associated with `when`, or with legacy `if=`/`if!=`, does not disable the parent fallback when its condition does not match.
 
 ## License
 
