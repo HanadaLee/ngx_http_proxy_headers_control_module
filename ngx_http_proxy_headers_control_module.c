@@ -962,8 +962,8 @@ static ngx_int_t
 ngx_http_proxy_request_headers_control_filter(ngx_http_request_t *r,
     ngx_http_proxy_filter_ctx_t *ctx)
 {
-    ngx_int_t                                  rc;
     ngx_http_proxy_headers_control_loc_conf_t *conf;
+    ngx_int_t                                  rc;
 
     if (ctx->headers == NULL) {
         return NGX_DECLINED;
