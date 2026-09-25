@@ -14,8 +14,8 @@
 
 #include <ngx_http_proxy_filter_module.h>
 
-#if (NGX_CONDITION)
-#include <ngx_http_condition_module.h>
+#if (NGX_EXPR)
+#include <ngx_http_expr_module.h>
 #endif
 
 
@@ -48,8 +48,8 @@ typedef struct {
     ngx_uint_t                               hash;
     ngx_str_t                                key;
     ngx_http_proxy_headers_control_opcode_e  opcode;
-#if (NGX_CONDITION)
-    ngx_condition_expr_id_t                  expr_id;
+#if (NGX_EXPR)
+    ngx_expr_when_id_t                       expr_id;
 #else
     ngx_http_complex_value_t                *filter;
     ngx_flag_t                               negative;
@@ -109,7 +109,7 @@ static ngx_command_t  ngx_http_proxy_headers_control_commands[] = {
 
     { ngx_string("proxy_request_header_control"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
@@ -121,7 +121,7 @@ static ngx_command_t  ngx_http_proxy_headers_control_commands[] = {
 
     { ngx_string("proxy_response_header_control"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LIF_CONF
-#if (NGX_CONDITION)
+#if (NGX_EXPR)
                         |NGX_HTTP_MAIN_WHEN_CONF|NGX_HTTP_SRV_WHEN_CONF
                         |NGX_HTTP_LOC_WHEN_CONF
 #endif
@@ -208,8 +208,8 @@ ngx_http_proxy_headers_control_merge_one_array(ngx_conf_t *cf,
 
     for (i = 0; i < orig_len; i++) {
 
-#if (NGX_CONDITION)
-        conditional = h[i].expr_id != NGX_CONDITION_NO_EXPR_ID;
+#if (NGX_EXPR)
+        conditional = h[i].expr_id != NGX_EXPR_NO_WHEN_ID;
 #else
         conditional = h[i].filter != NULL;
 #endif
@@ -347,7 +347,7 @@ ngx_http_proxy_headers_control_parse_directive(ngx_conf_t *cf,
     ngx_str_t                                   *arg, *cmd_name;
     ngx_str_t                                    key, value;
     ngx_uint_t                                   cur;
-#if !(NGX_CONDITION)
+#if !(NGX_EXPR)
     ngx_str_t                                    s;
     ngx_http_compile_complex_value_t             ccv;
 #endif
@@ -422,8 +422,8 @@ ngx_http_proxy_headers_control_parse_directive(ngx_conf_t *cf,
     ngx_memzero(hv, sizeof(ngx_http_proxy_headers_control_header_val_t));
     hv->opcode = opcode;
     hv->request = request;
-#if (NGX_CONDITION)
-    hv->expr_id = ngx_condition_get_associated_expr_id(cf);
+#if (NGX_EXPR)
+    hv->expr_id = ngx_expr_get_associated_when_id(cf);
 #endif
 
     cur = 2;
@@ -457,7 +457,7 @@ ngx_http_proxy_headers_control_parse_directive(ngx_conf_t *cf,
         value = arg[cur++];
     }
 
-#if !(NGX_CONDITION)
+#if !(NGX_EXPR)
     if (cf->args->nelts > cur) {
 
         if (arg[cur].len > 3
@@ -682,13 +682,12 @@ ngx_http_proxy_headers_control_exec_header(ngx_http_request_t *r,
     ngx_list_t *headers, ngx_http_proxy_headers_control_header_val_t *hv)
 {
     ngx_str_t  value;
-#if !(NGX_CONDITION)
+#if !(NGX_EXPR)
     ngx_str_t  val;
 #endif
 
-#if (NGX_CONDITION)
-    if (ngx_http_condition_get_expr_result(r, hv->expr_id)
-        != NGX_CONDITION_EXPR_HIT)
+#if (NGX_EXPR)
+    if (ngx_http_expr_get_result(r, hv->expr_id) != NGX_EXPR_WHEN_HIT)
     {
         return NGX_DECLINED;
     }

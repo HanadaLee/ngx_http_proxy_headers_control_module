@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Tests for proxy header controls with ngx_condition_module.
+# Tests for proxy header controls with ngx_expr_module.
 
 ###############################################################################
 
@@ -18,7 +18,7 @@ use Test::Nginx qw/ :DEFAULT http_content /;
 select STDERR; $| = 1;
 select STDOUT; $| = 1;
 
-my $t = Test::Nginx->new()->has(qw/http proxy rewrite ngx_condition_module
+my $t = Test::Nginx->new()->has(qw/http proxy rewrite ngx_expr_module
 	ngx_http_proxy_filter_module ngx_http_proxy_headers_control_module/)
 	->plan(35);
 
@@ -57,7 +57,7 @@ http {
         listen       127.0.0.1:8080;
         server_name  localhost;
 
-        condition special str_eq $arg_mode special;
+        expr special str_eq $arg_mode special;
 
         location = /ops {
             proxy_request_header_control set X-Set $arg_value;

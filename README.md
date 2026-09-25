@@ -7,7 +7,7 @@ An nginx module for fine-grained control over HTTP headers in proxy traffic — 
 - **Request header control** — modify headers before they are sent to the upstream server
 - **Response header control** — modify headers from the upstream before they reach the client
 - **Multiple operations** — `set`, `clear`, `add`, `append`, `rewrite`
-- **Conditional execution** — use named `condition`/`when` rules when `ngx_condition_module` is built, or legacy `if=`/`if!=` otherwise
+- **Conditional execution** — use named `expr`/`when` rules when `ngx_expr_module` is built, or legacy `if=`/`if!=` otherwise
 - **Wildcard support** — clear multiple headers matching a pattern (`Header-*`)
 - **Configuration inheritance** — rules merge naturally across `http`, `server`, and `location` blocks
 
@@ -33,12 +33,12 @@ To enable named conditions, build both addons statically in the same nginx confi
 
 ```bash
 ./configure \
-    --add-module=/path/to/ngx_condition_module \
+    --add-module=/path/to/ngx_expr_module \
     --add-module=/path/to/ngx_http_proxy_filter_module \
     --add-module=/path/to/ngx_http_proxy_headers_control_module
 ```
 
-Conditional syntax is selected at compile time. With `ngx_condition_module`, use `condition` and `when`; `if=` and `if!=` parameters are rejected. Without it, `when` is unavailable and the legacy parameters remain supported.
+Conditional syntax is selected at compile time. With `ngx_expr_module`, use `expr` and `when`; `if=` and `if!=` parameters are rejected. Without it, `when` is unavailable and the legacy parameters remain supported.
 
 ## Directives
 
@@ -90,13 +90,13 @@ location /api/ {
 location /api/ {
     proxy_pass http://backend;
 
-    # With ngx_condition_module
-    condition debug_enabled str_eq $arg_debug 1;
+    # With ngx_expr_module
+    expr debug_enabled str_eq $arg_debug 1;
     when debug_enabled {
         proxy_request_header_control set X-Debug true;
     }
 
-    # Without ngx_condition_module, use this instead:
+    # Without ngx_expr_module, use this instead:
     # proxy_request_header_control set X-Debug true if=$arg_debug;
 }
 ```
@@ -140,11 +140,11 @@ location /api/ {
 
 ## Conditional Rules
 
-With `ngx_condition_module`, define a named condition and place one or more rules in a `when` block. A `when` block may reference multiple condition names, and a name may be negated with `!`:
+With `ngx_expr_module`, define a named condition and place one or more rules in a `when` block. A `when` block may reference multiple condition names, and a name may be negated with `!`:
 
 ```nginx
-condition has_special_value is_not_empty $special_value;
-condition is_internal str_eq $http_x_internal 1;
+expr has_special_value !is_empty $special_value;
+expr is_internal str_eq $http_x_internal 1;
 
 when has_special_value !is_internal {
     proxy_request_header_control set X-Special $special_value;
@@ -152,7 +152,7 @@ when has_special_value !is_internal {
 }
 ```
 
-Without `ngx_condition_module`, use the legacy complex-value parameters:
+Without `ngx_expr_module`, use the legacy complex-value parameters:
 
 - `if=$var` — apply if the variable is non-empty and not `"0"`
 - `if!=$var` — apply if the variable is empty or `"0"`
